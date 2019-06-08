@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Sigafoos/iv/model"
 	"github.com/bwmarrin/discordgo"
 	"github.com/spf13/viper"
 )
@@ -30,21 +31,6 @@ type Query struct {
 	Atk     string
 	Def     string
 	HP      string
-}
-
-type Response struct {
-	Rank    int     `json:"rank"`
-	Level   float64 `json:"level"`
-	CP      int     `json:"cp"`
-	Stats   Stats   `json:"stats"`
-	Product float64 `json:"statProduct"`
-	Percent float64 `json:"percent"`
-}
-
-type Stats struct {
-	Attack  float64 `json:"atk"`
-	Defense float64 `json:"def"`
-	HP      float64 `json:"hp"`
 }
 
 var access *log.Logger
@@ -175,7 +161,7 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s sorry, something's gone wrong", m.Author.Mention()))
 		return
 	}
-	var spread Response
+	var spread model.Spread
 	err = json.Unmarshal(body, &spread)
 	if err != nil {
 		log.Println(err)
@@ -183,7 +169,7 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	message := fmt.Sprintf("%s your %s is rank %v (%v%%)", m.Author.Mention(), query.Pokemon, spread.Rank, (math.Trunc(spread.Percent*100) / 100))
+	message := fmt.Sprintf("%s your %s is rank %v (%v%%)", m.Author.Mention(), query.Pokemon, *spread.Ranks.All, (math.Trunc(spread.Percentage*100) / 100))
 	if verbose {
 		message = fmt.Sprintf("%s\n\nCP: `%v`\nLevel: `%v`\nAttack: `%v`\nDefense: `%v`\nHP: `%v`\nProduct: `%v`", message, spread.CP, spread.Level, spread.Stats.Attack, spread.Stats.Defense, spread.Stats.HP, spread.Product)
 	}
