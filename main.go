@@ -98,15 +98,18 @@ func main() {
 }
 
 func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	var verbose bool
+	var command string
 	// ignore messages posted by wobbotfet
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
 	pieces := strings.Split(m.Content, " ")
+	command = "rank"
 	if pieces[0] == "!vrank" {
-		verbose = true
+		command = "verbose"
+	} else if pieces[0] == "!betterthan" {
+		command = "better"
 	} else if pieces[0] != "!rank" {
 		return
 	}
@@ -170,7 +173,26 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	message := fmt.Sprintf("%s your %s is rank %v (%v%%)", m.Author.Mention(), query.Pokemon, *spread.Ranks.All, (math.Trunc(spread.Percentage*100) / 100))
-	if verbose {
+
+	if command == "better" {
+		wild := float64(math.Round(float64(*spread.Ranks.All-1)/4096*100*100)) / 100
+		good := float64(math.Round(float64(*spread.Ranks.Good-1)/4096*100*100)) / 100
+		great := float64(math.Round(float64(*spread.Ranks.Great-1)/4096*100*100)) / 100
+		ultra := float64(math.Round(float64(*spread.Ranks.Ultra-1)/4096*100*100)) / 100
+		weather := float64(math.Round(float64(*spread.Ranks.Weather-1)/4096*100*100)) / 100
+		best := float64(math.Round(float64(*spread.Ranks.Best-1)/4096*100*100)) / 100
+		hatched := float64(math.Round(float64(*spread.Ranks.Hatched-1)/4096*100*100)) / 100
+		lucky := float64(math.Round(float64(*spread.Ranks.Lucky-1)/4096*100*100)) / 100
+
+		message = fmt.Sprintf("%s\n\nYour chances of getting a better %s:\n\n`%v%%`: Wild catch", message, query.Pokemon, wild)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Good Friend", message, good)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Great Friend", message, great)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Ultra Friend", message, ultra)
+		message = fmt.Sprintf("%s\n`%v%%`: Weather boosted catch", message, weather)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Best Friend", message, best)
+		message = fmt.Sprintf("%s\n`%v%%`: Hatched from an egg", message, hatched)
+		message = fmt.Sprintf("%s\n`%v%%`: Lucky Trade", message, lucky)
+	} else if command == "verbose" {
 		message = fmt.Sprintf("%s\n\nCP: `%v`\nLevel: `%v`\nAttack: `%v`\nDefense: `%v`\nHP: `%v`\nProduct: `%v`", message, spread.CP, spread.Level, spread.Stats.Attack, spread.Stats.Defense, spread.Stats.HP, spread.Product)
 	}
 	s.ChannelMessageSend(m.ChannelID, message)
