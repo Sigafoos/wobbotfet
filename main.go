@@ -55,7 +55,7 @@ func main() {
 	log.SetOutput(eLog)
 
 	var env, auth string
-	if len(os.Args) > 2 {
+	if len(os.Args) < 2 {
 		env = "prod"
 	} else {
 		env = os.Args[1]
