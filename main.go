@@ -190,7 +190,7 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		message = fmt.Sprintf("%s\n`%v%%`: Trade with Ultra Friend", message, ultra)
 		message = fmt.Sprintf("%s\n`%v%%`: Weather boosted catch", message, weather)
 		message = fmt.Sprintf("%s\n`%v%%`: Trade with Best Friend", message, best)
-		message = fmt.Sprintf("%s\n`%v%%`: Hatched from an egg", message, hatched)
+		message = fmt.Sprintf("%s\n`%v%%`: Hatched/Raid/Research", message, hatched)
 		message = fmt.Sprintf("%s\n`%v%%`: Lucky Trade", message, lucky)
 	} else if command == "verbose" {
 		message = fmt.Sprintf("%s\n\nCP: `%v`\nLevel: `%v`\nAttack: `%v`\nDefense: `%v`\nHP: `%v`\nProduct: `%v`", message, spread.CP, spread.Level, spread.Stats.Attack, spread.Stats.Defense, spread.Stats.HP, spread.Product)
