@@ -176,13 +176,13 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if command == "better" {
 		wild := float64(math.Round(float64(*spread.Ranks.All-1)/4096*100*100)) / 100
-		good := float64(math.Round(float64(*spread.Ranks.Good-1)/4096*100*100)) / 100
-		great := float64(math.Round(float64(*spread.Ranks.Great-1)/4096*100*100)) / 100
-		ultra := float64(math.Round(float64(*spread.Ranks.Ultra-1)/4096*100*100)) / 100
-		weather := float64(math.Round(float64(*spread.Ranks.Weather-1)/4096*100*100)) / 100
-		best := float64(math.Round(float64(*spread.Ranks.Best-1)/4096*100*100)) / 100
-		hatched := float64(math.Round(float64(*spread.Ranks.Hatched-1)/4096*100*100)) / 100
-		lucky := float64(math.Round(float64(*spread.Ranks.Lucky-1)/4096*100*100)) / 100
+		good := float64(math.Round(float64(*spread.Ranks.Good-1)/3375*100*100)) / 100
+		great := float64(math.Round(float64(*spread.Ranks.Great-1)/2744*100*100)) / 100
+		ultra := float64(math.Round(float64(*spread.Ranks.Ultra-1)/2197*100*100)) / 100
+		weather := float64(math.Round(float64(*spread.Ranks.Weather-1)/1728*100*100)) / 100
+		best := float64(math.Round(float64(*spread.Ranks.Best-1)/1331*100*100)) / 100
+		hatched := float64(math.Round(float64(*spread.Ranks.Hatched-1)/216*100*100)) / 100
+		lucky := float64(math.Round(float64(*spread.Ranks.Lucky-1)/64*100*100)) / 100
 
 		message = fmt.Sprintf("%s\n\nYour chances of getting a better %s:\n\n`%v%%`: Wild catch", message, query.Pokemon, wild)
 		message = fmt.Sprintf("%s\n`%v%%`: Trade with Good Friend", message, good)
