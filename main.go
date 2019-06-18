@@ -105,6 +105,11 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	pieces := strings.Split(strings.ToLower(m.Content), " ")
+	if len(pieces) < 2 {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s `%s` isn't a command I can parse", m.Author.Mention(), m.Content))
+		return
+	}
+
 	command = "rank"
 	if pieces[0] == "!vrank" {
 		command = "verbose"
