@@ -2,9 +2,14 @@
 A Discord bot for reporting the PVP IVs of a Pokemon in Pokemon Go.
 
 ## Usage
+To add wobbotfet: https://discordapp.com/oauth2/authorize?client_id=584875596484444175&scope=bot&permissions=2048
+
 Run `!rank help` in a channel where wobbotfet is present.
 
-To add wobbotfet: https://discordapp.com/oauth2/authorize?client_id=584875596484444175&scope=bot&permissions=2048
+### Features
+* `!rank wobbotfet 12 13 10` for the rank of the IV spread `12/13/10`
+* `!vrank wobbotfet 12 13 10` for the rank, and also the numbers used to calculate it
+* `!betterthan wobbotfet 12 13 10` for the odds of a better rank (in a variety of circumstances)
 
 ## Building
 

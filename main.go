@@ -104,7 +104,7 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	pieces := strings.Split(m.Content, " ")
+	pieces := strings.Split(strings.ToLower(m.Content), " ")
 	command = "rank"
 	if pieces[0] == "!vrank" {
 		command = "verbose"
@@ -199,7 +199,7 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func helpMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s usage: `!rank <league?> <pokemon> <atk> <def> <sta>` (league is optional and defaults to `great`)\n\nCapitalization is irrelevant and `(`, `)` and `.` are stripped, so `Deoxys (Defense)` and `deoxys defense` are the same\n\n`!vrank` (for `verbose rank`) will give you the values of each stat as well as the product, in case you want to double check the values against other, less Wobby, IV services\n\nAny questions or concerns: ask %s", m.Author.Mention(), sigafoos.Mention()))
+	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s usage: `!<command> <league?> <pokemon> <atk> <def> <sta>` (league is optional and defaults to `great`)\n\nCapitalization is irrelevant and `(`, `)` and `.` are stripped, so `Deoxys (Defense)` and `deoxys defense` are the same\n\n**Commands**\n`!rank` will tell you the rank of your IV spread\n`!vrank` (for `verbose rank`) will give you the values of each stat as well as the product, in case you want to double check the values against other, less Wobby, IV services\n`!betterthan` will tell you the odds of obtaining a higher rank\n\nAny questions or concerns: ask %s", m.Author.Mention(), sigafoos.Mention()))
 }
 
 func parseIVs(atk, def, hp string) (iAtk, iDef, iHP int, err error) {
