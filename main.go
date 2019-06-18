@@ -117,7 +117,11 @@ func readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		helpMessage(s, m)
 		return
 	}
-	query := parseQuery(pieces)
+	query, err := parseQuery(pieces)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s `%s` isn't a command I can parse (did you pass `4/1/3` instead of `4 1 3`?)", m.Author.Mention(), m.Content))
+		return
+	}
 
 	access.Printf("\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), query.League, query.Pokemon, query.Atk, query.Def, query.HP)
 
@@ -221,7 +225,7 @@ func parseIVs(atk, def, hp string) (iAtk, iDef, iHP int, err error) {
 	return
 }
 
-func parseQuery(p []string) Query {
+func parseQuery(p []string) (Query, error) {
 	q := Query{
 		Atk: p[len(p)-3],
 		Def: p[len(p)-2],
@@ -229,12 +233,18 @@ func parseQuery(p []string) Query {
 	}
 
 	if p[1] == "great" || p[1] == "ultra" || p[1] == "master" {
+		if len(p) < 6 {
+			return q, fmt.Errorf("not enough IVs")
+		}
 		q.League = p[1]
 		q.Pokemon = strings.Join(p[2:len(p)-3], " ")
 	} else {
+		if len(p) < 5 {
+			return q, fmt.Errorf("not enough IVs")
+		}
 		q.League = "great"
 		q.Pokemon = strings.Join(p[1:len(p)-3], " ")
 	}
 
-	return q
+	return q, nil
 }
