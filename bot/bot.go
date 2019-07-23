@@ -25,6 +25,8 @@ var access *log.Logger
 
 var aLog, eLog *os.File
 
+var version string
+
 type Bot struct {
 	owner   *discordgo.User
 	pm      *discordgo.Channel
@@ -78,6 +80,9 @@ func (b *Bot) Start() {
 		if err != nil {
 			log.Printf("error opening PM with owner: %s", err.Error())
 		}
+	}
+	if version != "" {
+		b.session.UpdateStatus(0, version)
 	}
 	b.PM("starting")
 	fmt.Println("wooooooooobbotfett!")
