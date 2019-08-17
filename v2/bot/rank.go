@@ -22,11 +22,11 @@ func init() {
 	registerCommand("vrank", verboseRank)
 }
 
-func rank(pieces []string, m *discordgo.MessageCreate) string {
+func rank(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
 	return getRank(pieces, false)
 }
 
-func verboseRank(pieces []string, m *discordgo.MessageCreate) string {
+func verboseRank(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
 	return getRank(pieces, true)
 }
 

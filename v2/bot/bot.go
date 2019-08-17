@@ -29,7 +29,7 @@ type Bot struct {
 	session *discordgo.Session
 }
 
-type command func([]string, *discordgo.MessageCreate) string
+type command func([]string, *discordgo.MessageCreate, *discordgo.Session) string
 type commandMap map[string]command
 
 var commands commandMap
@@ -167,7 +167,7 @@ func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if !ok {
 		response = fmt.Sprintf("I don't have a `%s` command", pieces[0])
 	} else {
-		response = f(pieces[1:], m)
+		response = f(pieces[1:], m, s)
 	}
 
 	if m.GuildID != "" {
