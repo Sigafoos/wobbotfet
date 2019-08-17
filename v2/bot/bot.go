@@ -29,7 +29,7 @@ type Bot struct {
 	session *discordgo.Session
 }
 
-type command func([]string) string
+type command func([]string, *discordgo.MessageCreate) string
 type commandMap map[string]command
 
 var commands commandMap
@@ -167,7 +167,7 @@ func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if !ok {
 		response = fmt.Sprintf("I don't have a `%s` command", pieces[0])
 	} else {
-		response = f(pieces[1:])
+		response = f(pieces[1:], m)
 	}
 
 	if m.GuildID != "" {
@@ -176,17 +176,6 @@ func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	s.ChannelMessageSend(m.ChannelID, response)
 
 	/*
-		if pieces[0] == "!vrank" {
-			command = "verbose"
-		} else if pieces[0] == "!betterthan" {
-			command = "better"
-		} else if pieces[0] != "!rank" {
-			return
-		}
-		if len(pieces) < 2 {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s `%s` isn't a command I can parse", m.Author.Mention(), m.Content))
-			return
-		}
 
 
 

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Sigafoos/iv/model"
+	"github.com/bwmarrin/discordgo"
 )
 
 const serviceBase = "https://ivservice.herokuapp.com/iv?pokemon=%s&ivs=%v/%v/%v"
@@ -21,11 +22,11 @@ func init() {
 	registerCommand("vrank", verboseRank)
 }
 
-func rank(pieces []string) string {
+func rank(pieces []string, m *discordgo.MessageCreate) string {
 	return getRank(pieces, false)
 }
 
-func verboseRank(pieces []string) string {
+func verboseRank(pieces []string, m *discordgo.MessageCreate) string {
 	return getRank(pieces, true)
 }
 
