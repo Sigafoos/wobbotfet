@@ -11,6 +11,7 @@ import (
 
 	"github.com/Sigafoos/pokemongo"
 	"github.com/bwmarrin/discordgo"
+	"github.com/spf13/viper"
 )
 
 type Request struct {
@@ -18,7 +19,9 @@ type Request struct {
 	Pokemon string `json:"pokemon,omitempty"`
 }
 
-var wantURL = "http://localhost:8080/want"
+var (
+	wantURL = "http://pokewants.herokuapp.com/want"
+)
 
 const applicationJSON = "application/json"
 
@@ -49,6 +52,11 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 		}
 		req.Header.Add("Content-Type", applicationJSON)
 		req.Header.Add("Accept", applicationJSON)
+		basicuser := viper.GetString("want.basicauth.user")
+		basicpass := viper.GetString("want.basicauth.pass")
+		if basicuser != "" && basicpass != "" {
+			req.SetBasicAuth(basicuser, basicpass)
+		}
 
 		response, err := client.Do(req)
 		if err != nil {
@@ -99,6 +107,11 @@ func listWants(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session
 	}
 	req.Header.Add("Content-Type", applicationJSON)
 	req.Header.Add("Accept", applicationJSON)
+	basicuser := viper.GetString("want.basicauth.user")
+	basicpass := viper.GetString("want.basicauth.pass")
+	if basicuser != "" && basicpass != "" {
+		req.SetBasicAuth(basicuser, basicpass)
+	}
 
 	response, err := client.Do(req)
 	if err != nil {
@@ -148,6 +161,11 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 		}
 		req.Header.Add("Content-Type", applicationJSON)
 		req.Header.Add("Accept", applicationJSON)
+		basicuser := viper.GetString("want.basicauth.user")
+		basicpass := viper.GetString("want.basicauth.pass")
+		if basicuser != "" && basicpass != "" {
+			req.SetBasicAuth(basicuser, basicpass)
+		}
 
 		response, err := client.Do(req)
 		if err != nil {
