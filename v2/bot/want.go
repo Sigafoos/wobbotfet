@@ -211,9 +211,10 @@ func addRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) 
 		return
 	}
 
+	var err error
 	role := getRole(roleName, m.GuildID, s)
 	if role == nil {
-		role, err := s.GuildRoleCreate(m.GuildID)
+		role, err = s.GuildRoleCreate(m.GuildID)
 		if err != nil {
 			// don't log if the admin just hasn't granted permissions
 			if !strings.HasPrefix(err.Error(), errorForbidden) {
@@ -221,7 +222,7 @@ func addRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) 
 			}
 			return
 		}
-		role, err = s.GuildRoleEdit(m.GuildID, role.ID, roleName, 0, false, 0, true)
+		_, err = s.GuildRoleEdit(m.GuildID, role.ID, roleName, 0, false, 0, true)
 		if err != nil {
 			log.Printf("error updating roleName %s in guild %s: %s\n", roleName, m.GuildID, err.Error())
 
@@ -233,7 +234,7 @@ func addRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) 
 		}
 	}
 
-	err := s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, role.ID)
+	err = s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, role.ID)
 	if err != nil {
 		log.Printf("error adding roleName %s to user %s in guild %s: %s\n", roleName, m.Author.Username, m.GuildID, err.Error())
 	}
