@@ -20,23 +20,35 @@ const serviceBase = "https://ivservice.herokuapp.com/iv?pokemon=%s&ivs=%v/%v/%v"
 func init() {
 	registerCommand("rank", rank)
 	registerCommand("vrank", verboseRank)
+	registerCommand("betterthan", betterthanRank)
 }
 
 func rank(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
-	return getRank(pieces, false)
+	return getRank(pieces, m, false, false)
 }
 
 func verboseRank(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
-	return getRank(pieces, true)
+	return getRank(pieces, m, true, false)
 }
 
-func getRank(pieces []string, verbose bool) string {
+func betterthanRank(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	return getRank(pieces, m, false, true)
+}
+
+func getRank(pieces []string, m *discordgo.MessageCreate, verbose bool, betterthan bool) string {
 	query, err := parseQuery(pieces)
 	if err != nil {
 		return fmt.Sprintf("`%s` isn't a valid rank command (did you pass `4/1/3` instead of `4 1 3`?)", strings.Join(pieces, " "))
 	}
 
-	//access.Printf("\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), query.League, query.Pokemon, query.Atk, query.Def, query.HP)
+	cmd := "rank"
+	if verbose {
+		cmd = "vrank"
+	} else if betterthan {
+		cmd = "betterthan"
+	}
+
+	access.Printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), cmd, query.League, query.Pokemon, query.Atk, query.Def, query.HP)
 
 	atk, def, hp, err := parseIVs(query.Atk, query.Def, query.HP)
 	if err != nil {
@@ -87,6 +99,26 @@ func getRank(pieces []string, verbose bool) string {
 
 	if verbose {
 		message = fmt.Sprintf("%s\n\nCP: `%v`\nLevel: `%v`\nAttack: `%v`\nDefense: `%v`\nHP: `%v`\nProduct: `%v`", message, spread.CP, spread.Level, spread.Stats.Attack, spread.Stats.Defense, spread.Stats.HP, spread.Product)
+	}
+
+	if betterthan == true {
+		wild := float64(math.Round(float64(*spread.Ranks.All-1)/4096*100*100)) / 100
+		good := float64(math.Round(float64(*spread.Ranks.Good-1)/3375*100*100)) / 100
+		great := float64(math.Round(float64(*spread.Ranks.Great-1)/2744*100*100)) / 100
+		ultra := float64(math.Round(float64(*spread.Ranks.Ultra-1)/2197*100*100)) / 100
+		weather := float64(math.Round(float64(*spread.Ranks.Weather-1)/1728*100*100)) / 100
+		best := float64(math.Round(float64(*spread.Ranks.Best-1)/1331*100*100)) / 100
+		hatched := float64(math.Round(float64(*spread.Ranks.Hatched-1)/216*100*100)) / 100
+		lucky := float64(math.Round(float64(*spread.Ranks.Lucky-1)/64*100*100)) / 100
+
+		message = fmt.Sprintf("%s\n\nYour chances of getting a better %s:\n\n`%v%%`: Wild catch", message, query.Pokemon, wild)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Good Friend", message, good)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Great Friend", message, great)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Ultra Friend", message, ultra)
+		message = fmt.Sprintf("%s\n`%v%%`: Weather boosted catch", message, weather)
+		message = fmt.Sprintf("%s\n`%v%%`: Trade with Best Friend", message, best)
+		message = fmt.Sprintf("%s\n`%v%%`: Hatched/Raid/Research", message, hatched)
+		message = fmt.Sprintf("%s\n`%v%%`: Lucky Trade", message, lucky)
 	}
 
 	return message

@@ -32,6 +32,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 	var succeeded []string
 	var failed []string
 	for _, w := range pieces {
+		access.Printf("%s\t%s\t%s\twant\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), w)
 		b, err := json.Marshal(&Request{User: m.Author.ID, Pokemon: w})
 		if err != nil {
 			log.Println(err)
@@ -89,6 +90,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 }
 
 func listWants(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	access.Printf("%s\t%s\t%s\twants\n", m.GuildID, m.ChannelID, m.Author.String())
 	req, err := http.NewRequest(http.MethodGet, wantURL+"?user="+m.Author.ID, nil)
 	if err != nil {
 		log.Println(err)
@@ -129,6 +131,7 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 	var succeeded []string
 	var failed []string
 	for _, w := range pieces {
+		access.Printf("%s\t%s\t%s\tunwant\t%s", m.GuildID, m.ChannelID, m.Author.String(), w)
 		b, err := json.Marshal(&Request{User: m.Author.ID, Pokemon: w})
 		if err != nil {
 			log.Println(err)
