@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/Sigafoos/pokemongo"
@@ -17,7 +18,7 @@ type Request struct {
 	Pokemon string `json:"pokemon,omitempty"`
 }
 
-const wantURL = "http://localhost:8080/want"
+var wantURL = "http://localhost:8080/want"
 
 const applicationJSON = "application/json"
 
@@ -256,6 +257,10 @@ func getRole(roleName, guildID string, s *discordgo.Session) *discordgo.Role {
 }
 
 func init() {
+	url := os.Getenv("wanturl")
+	if url != "" {
+		wantURL = url
+	}
 	registerCommand("want", want)
 	registerCommand("wants", listWants)
 	registerCommand("unwant", unwant)

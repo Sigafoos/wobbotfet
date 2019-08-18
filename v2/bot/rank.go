@@ -15,9 +15,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const serviceBase = "https://ivservice.herokuapp.com/iv?pokemon=%s&ivs=%v/%v/%v"
+var rankURL = "https://ivservice.herokuapp.com/iv?pokemon=%s&ivs=%v/%v/%v"
 
 func init() {
+	url := os.Getenv("rankurl")
+	if url != "" {
+		rankURL = url
+	}
 	registerCommand("rank", rank)
 	registerCommand("vrank", verboseRank)
 	registerCommand("betterthan", betterthanRank)
@@ -60,7 +64,7 @@ func getRank(pieces []string, m *discordgo.MessageCreate, verbose bool, betterth
 		return "sorry, but I only know how to handle great league right now"
 	}
 
-	parsedURL := fmt.Sprintf(serviceBase, url.QueryEscape(query.Pokemon), atk, def, hp)
+	parsedURL := fmt.Sprintf(rankURL, url.QueryEscape(query.Pokemon), atk, def, hp)
 	req, err := http.NewRequest(http.MethodGet, parsedURL, nil)
 	if err != nil {
 		log.Println(err)
