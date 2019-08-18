@@ -1,6 +1,8 @@
 # Wobbotfet!
 A Discord bot for reporting the PVP IVs of a Pokemon in Pokemon Go.
 
+**Note**! This documentation is for the original v1 bot. For v2, which adds more commands and has a different syntax, see the v2 directory's README.
+
 ## Usage
 To add wobbotfet: https://discordapp.com/oauth2/authorize?client_id=584875596484444175&scope=bot&permissions=2048
 
