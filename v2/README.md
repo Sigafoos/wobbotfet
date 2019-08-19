@@ -1,8 +1,6 @@
 # Wobbotfet!
 A Discord bot for reporting the PVP IVs of a Pokemon in Pokemon Go.
 
-**Note**! This documentation is for the original v1 bot. For v2, which adds more commands and has a different syntax, see the v2 directory's README.
-
 ## Usage
 To add wobbotfet: https://discordapp.com/oauth2/authorize?client_id=584875596484444175&scope=bot&permissions=2048
 
@@ -38,4 +36,13 @@ token:
   prod: abc413
 ```
 
-Where `abc413` is the bot token generated in the Discord developer console. `prod` is required, but you can have any number of them to run as different bots (for instance, a `dev` bot to test on)
+Where `abc413` is the bot token generated in the Discord developer console. `prod` is required, but you can have any number of them to run as different bots (for instance, a `dev` bot to test on).
+
+If your instance of `pokewants` requires basic auth, you'll need to include that in the config as well:
+
+```yaml
+want:
+  basicauth:
+    user: foo
+    pass: bar
+```
