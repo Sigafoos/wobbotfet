@@ -34,12 +34,15 @@ type commandMap map[string]command
 
 var commands commandMap
 
+var help []string
+
 func init() {
 	commands = make(map[string]command)
 }
 
-func registerCommand(key string, f command) {
+func registerCommand(key string, f command, helpText string) {
 	commands[key] = f
+	help = append(help, fmt.Sprintf("**%s**: %s", key, helpText))
 }
 
 type Query struct {

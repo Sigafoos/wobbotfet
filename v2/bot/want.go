@@ -280,7 +280,7 @@ func init() {
 	if url != "" {
 		wantURL = url
 	}
-	registerCommand("want", want)
-	registerCommand("wants", listWants)
-	registerCommand("unwant", unwant)
+	registerCommand("want", want, "`want wobbuffet` to add to your wants")
+	registerCommand("unwant", unwant, "`unwant wobbuffet` to remove from your wants")
+	registerCommand("wants", listWants, "list your wants")
 }
