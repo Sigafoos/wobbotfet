@@ -9,8 +9,8 @@ import (
 func runHelp(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
 	message := "here is what you can ask me:\n"
 
-	for command, text := range help {
-		message = fmt.Sprintf("%s\n**%s**: %s", message, command, text)
+	for _, text := range help {
+		message = fmt.Sprintf("%s\n%s", message, text)
 	}
 	return message
 }
