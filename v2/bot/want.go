@@ -3,6 +3,7 @@ package bot
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,7 +21,7 @@ type Request struct {
 }
 
 var (
-	wantURL = "http://pokewants.herokuapp.com/want"
+	wantURL = "http://pokewants.herokuapp.com"
 )
 
 const applicationJSON = "application/json"
@@ -44,7 +45,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 			continue
 		}
 
-		req, err := http.NewRequest(http.MethodPost, wantURL, bytes.NewReader(b))
+		req, err := http.NewRequest(http.MethodPost, wantURL+"/want", bytes.NewReader(b))
 		if err != nil {
 			log.Println(err)
 			failed = append(failed, w)
@@ -100,7 +101,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 
 func listWants(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
 	access.Printf("%s\t%s\t%s\twants\n", m.GuildID, m.ChannelID, m.Author.String())
-	req, err := http.NewRequest(http.MethodGet, wantURL+"?user="+m.Author.ID, nil)
+	req, err := http.NewRequest(http.MethodGet, wantURL+"/want?user="+m.Author.ID, nil)
 	if err != nil {
 		log.Println(err)
 		return "uh oh, something's gone wrong"
@@ -153,7 +154,7 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 			continue
 		}
 
-		req, err := http.NewRequest(http.MethodDelete, wantURL, bytes.NewReader(b))
+		req, err := http.NewRequest(http.MethodDelete, wantURL+"/want", bytes.NewReader(b))
 		if err != nil {
 			log.Println(err)
 			failed = append(failed, w)
@@ -200,6 +201,57 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 		message += "failed removing: " + strings.Join(failed, ", ")
 	}
 	return message
+}
+
+func searchForPokemon(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	if len(pieces) < 1 {
+		return "I need a Pokemon to search for!"
+	}
+	if len(pieces) > 1 {
+		return "you can only search for one Pokemon at a time"
+	}
+
+	access.Printf("%s\t%s\t%s\tsearch\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), pieces[0])
+	req, err := http.NewRequest(http.MethodGet, wantURL+"/search?name="+pieces[0], nil)
+	if err != nil {
+		log.Println(err)
+		return "uh oh, something's gone wrong"
+	}
+
+	req.Header.Add("Content-Type", applicationJSON)
+	req.Header.Add("Accept", applicationJSON)
+	basicuser := viper.GetString("want.basicauth.user")
+	basicpass := viper.GetString("want.basicauth.pass")
+	if basicuser != "" && basicpass != "" {
+		req.SetBasicAuth(basicuser, basicpass)
+	}
+
+	response, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+		return "uh oh, something's gone wrong"
+	}
+	defer response.Body.Close()
+
+	b, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println(err)
+		return "sorry, something's gone wrong"
+	}
+
+	var pokemon []pokemongo.Pokemon
+	err = json.Unmarshal(b, &pokemon)
+	if err != nil {
+		log.Println(err)
+		return "sorry, something's gone wrong"
+	}
+
+	var names []string
+	for _, p := range pokemon {
+		names = append(names, p.ID)
+	}
+
+	return fmt.Sprintf("`%s` matches: %s", pieces[0], strings.Join(names, ", "))
 }
 
 // add a role to a user. creates it if it doesn't exist. on error, log it and silently return.
@@ -283,4 +335,5 @@ func init() {
 	registerCommand("want", want, "`want wobbuffet` to add to your wants")
 	registerCommand("unwant", unwant, "`unwant wobbuffet` to remove from your wants")
 	registerCommand("wants", listWants, "list your wants")
+	registerCommand("search", searchForPokemon, "search for Pokemon by name")
 }
