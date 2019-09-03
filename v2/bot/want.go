@@ -37,18 +37,19 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 	var succeeded []string
 	var failed []string
 	for _, w := range pieces {
+		formattedName := "`" + w + "`"
 		access.Printf("%s\t%s\t%s\twant\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), w)
 		b, err := json.Marshal(&Request{User: m.Author.ID, Pokemon: w})
 		if err != nil {
 			log.Println(err)
-			failed = append(failed, w)
+			failed = append(failed, formattedName)
 			continue
 		}
 
 		req, err := http.NewRequest(http.MethodPost, wantURL+"/want", bytes.NewReader(b))
 		if err != nil {
 			log.Println(err)
-			failed = append(failed, w)
+			failed = append(failed, formattedName)
 			continue
 		}
 		req.Header.Add("Content-Type", applicationJSON)
@@ -62,7 +63,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 		response, err := client.Do(req)
 		if err != nil {
 			log.Println(err)
-			failed = append(failed, w)
+			failed = append(failed, formattedName)
 			continue
 		}
 		if response.Body != nil {
@@ -70,12 +71,12 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 		}
 
 		if response.StatusCode == http.StatusNotFound {
-			failed = append(failed, w+" (no such Pokemon)")
+			failed = append(failed, formattedName+" (no such Pokemon)")
 			continue
 		}
 
 		if response.StatusCode == http.StatusConflict {
-			failed = append(failed, w+" (already wanted)")
+			failed = append(failed, formattedName+" (already wanted)")
 			continue
 		}
 
@@ -83,7 +84,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 			log.Printf("error creating want: got %v\n", response.StatusCode)
 			return "uh oh, something went wrong"
 		}
-		succeeded = append(succeeded, w)
+		succeeded = append(succeeded, formattedName)
 		addRole(w, m, s)
 	}
 	var message string
@@ -134,30 +135,35 @@ func listWants(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session
 		return "sorry, something's gone wrong"
 	}
 
-	var names []string
-	for _, p := range pokemon {
-		names = append(names, p.Name)
+	if len(pokemon) == 0 {
+		return "you don't have any wanted Pokemon"
 	}
 
-	return "your wants: " + strings.Join(names, ", ")
+	var names []string
+	for _, p := range pokemon {
+		names = append(names, p.ID)
+	}
+
+	return "your wants: `" + strings.Join(names, "`, `") + "`"
 }
 
 func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
 	var succeeded []string
 	var failed []string
 	for _, w := range pieces {
+		formattedName := "`" + w + "`"
 		access.Printf("%s\t%s\t%s\tunwant\t%s", m.GuildID, m.ChannelID, m.Author.String(), w)
 		b, err := json.Marshal(&Request{User: m.Author.ID, Pokemon: w})
 		if err != nil {
 			log.Println(err)
-			failed = append(failed, w)
+			failed = append(failed, formattedName)
 			continue
 		}
 
 		req, err := http.NewRequest(http.MethodDelete, wantURL+"/want", bytes.NewReader(b))
 		if err != nil {
 			log.Println(err)
-			failed = append(failed, w)
+			failed = append(failed, formattedName)
 			continue
 		}
 		req.Header.Add("Content-Type", applicationJSON)
@@ -171,7 +177,7 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 		response, err := client.Do(req)
 		if err != nil {
 			log.Println(err)
-			failed = append(failed, w)
+			failed = append(failed, formattedName)
 			continue
 		}
 		if response.Body != nil {
@@ -179,7 +185,7 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 		}
 
 		if response.StatusCode == http.StatusNotFound {
-			failed = append(failed, w+" (no such Pokemon)")
+			failed = append(failed, formattedName+" (no such Pokemon)")
 			continue
 		}
 
@@ -187,7 +193,7 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 			log.Printf("error creating want: got %v\n", response.StatusCode)
 			return "uh oh, something went wrong"
 		}
-		succeeded = append(succeeded, w)
+		succeeded = append(succeeded, formattedName)
 		removeRole(w, m, s)
 	}
 	var message string
