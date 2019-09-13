@@ -100,7 +100,16 @@ func getRank(pieces []string, m *discordgo.MessageCreate, verbose bool, betterth
 		return "sorry, something's gone wrong"
 	}
 
-	message := fmt.Sprintf("your %s is rank %v (%v%%)", query.Pokemon, *spread.Ranks.All, (math.Trunc(spread.Percentage*100) / 100))
+	rank := *spread.Ranks.All
+	if query.Floor != "" {
+		switch query.Floor {
+		// all others can still be obtained in the wild so who cares
+		case FloorHatched:
+			rank = *spread.Ranks.Hatched
+		}
+	}
+
+	message := fmt.Sprintf("your %s is rank %v (%v%%)", query.Pokemon, rank, (math.Trunc(spread.Percentage*100) / 100))
 
 	if verbose {
 		message = fmt.Sprintf("%s\n\nCP: `%v`\nLevel: `%v`\nAttack: `%v`\nDefense: `%v`\nHP: `%v`\nProduct: `%v`", message, spread.CP, spread.Level, spread.Stats.Attack, spread.Stats.Defense, spread.Stats.HP, spread.Product)
@@ -130,13 +139,19 @@ func getRank(pieces []string, m *discordgo.MessageCreate, verbose bool, betterth
 }
 
 func parseQuery(p []string) (Query, error) {
+	floor, ok := FloorMap[p[len(p)-1]]
+	if ok {
+		p = p[:len(p)-1]
+	}
+
 	if len(p) < 4 {
 		return Query{}, fmt.Errorf("not enough IVs")
 	}
 	q := Query{
-		Atk: p[len(p)-3],
-		Def: p[len(p)-2],
-		HP:  p[len(p)-1],
+		Atk:   p[len(p)-3],
+		Def:   p[len(p)-2],
+		HP:    p[len(p)-1],
+		Floor: floor,
 	}
 
 	if p[1] == "great" || p[1] == "ultra" || p[1] == "master" {

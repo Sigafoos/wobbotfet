@@ -23,6 +23,12 @@ var (
 	aLog, eLog *os.File
 )
 
+const (
+	FloorHatched = "hatched"
+)
+
+var FloorMap map[string]string
+
 type Bot struct {
 	owner   *discordgo.User
 	pm      *discordgo.Channel
@@ -37,6 +43,12 @@ var commands commandMap
 var help []string
 
 func init() {
+	FloorMap = make(map[string]string)
+	FloorMap["raid"] = FloorHatched
+	FloorMap["hatch"] = FloorHatched
+	FloorMap["hatched"] = FloorHatched
+	FloorMap["research"] = FloorHatched
+
 	commands = make(map[string]command)
 }
 
@@ -51,6 +63,7 @@ type Query struct {
 	Atk     string
 	Def     string
 	HP      string
+	Floor   string
 }
 
 func New(auth string, owner *discordgo.User) *Bot {
