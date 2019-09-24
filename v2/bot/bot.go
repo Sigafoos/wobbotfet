@@ -66,7 +66,7 @@ type Query struct {
 	Floor   string
 }
 
-func New(auth string, owner *discordgo.User) *Bot {
+func New(auth string) *Bot {
 	var err error
 	aLog, err = os.OpenFile("access.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
@@ -85,11 +85,12 @@ func New(auth string, owner *discordgo.User) *Bot {
 		log.Fatal(err)
 	}
 
-	b := &Bot{
-		owner:   owner,
-		session: session,
-	}
+	b := &Bot{session: session}
 	session.AddHandler(b.readMessage)
+
+	if owner := os.Getenv("DISCORD_OWNER"); owner != "" {
+		b.owner = &discordgo.User{ID: owner}
+	}
 
 	return b
 }

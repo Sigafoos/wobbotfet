@@ -1,12 +1,12 @@
-FROM golang:1.13
+FROM golang:1.13 AS build
 
-WORKDIR /wobbotfet
+WORKDIR /app
+COPY . .
 
-ADD . /wobbotfet
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"'
 
+FROM scratch
 ENV PORT 4080
-EXPOSE $PORT
-
-RUN cd /wobbotfet && go build
-
+EXPOSE 4080
+COPY --from=build /app/wobbotfet .
 ENTRYPOINT ["./wobbotfet"]

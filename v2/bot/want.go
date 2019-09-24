@@ -12,7 +12,6 @@ import (
 
 	"github.com/Sigafoos/pokemongo"
 	"github.com/bwmarrin/discordgo"
-	"github.com/spf13/viper"
 )
 
 type Request struct {
@@ -21,7 +20,9 @@ type Request struct {
 }
 
 var (
-	wantURL = "http://pokewants.herokuapp.com"
+	wantURL   = os.Getenv("WANT_URL")
+	basicuser = os.Getenv("WANT_BASICUSER")
+	basicpass = os.Getenv("WANT_BASICPASS")
 )
 
 const applicationJSON = "application/json"
@@ -54,8 +55,6 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 		}
 		req.Header.Add("Content-Type", applicationJSON)
 		req.Header.Add("Accept", applicationJSON)
-		basicuser := viper.GetString("want.basicauth.user")
-		basicpass := viper.GetString("want.basicauth.pass")
 		if basicuser != "" && basicpass != "" {
 			req.SetBasicAuth(basicuser, basicpass)
 		}
@@ -109,8 +108,6 @@ func listWants(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session
 	}
 	req.Header.Add("Content-Type", applicationJSON)
 	req.Header.Add("Accept", applicationJSON)
-	basicuser := viper.GetString("want.basicauth.user")
-	basicpass := viper.GetString("want.basicauth.pass")
 	if basicuser != "" && basicpass != "" {
 		req.SetBasicAuth(basicuser, basicpass)
 	}
@@ -168,8 +165,6 @@ func unwant(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) s
 		}
 		req.Header.Add("Content-Type", applicationJSON)
 		req.Header.Add("Accept", applicationJSON)
-		basicuser := viper.GetString("want.basicauth.user")
-		basicpass := viper.GetString("want.basicauth.pass")
 		if basicuser != "" && basicpass != "" {
 			req.SetBasicAuth(basicuser, basicpass)
 		}
@@ -226,8 +221,6 @@ func searchForPokemon(pieces []string, m *discordgo.MessageCreate, s *discordgo.
 
 	req.Header.Add("Content-Type", applicationJSON)
 	req.Header.Add("Accept", applicationJSON)
-	basicuser := viper.GetString("want.basicauth.user")
-	basicpass := viper.GetString("want.basicauth.pass")
 	if basicuser != "" && basicpass != "" {
 		req.SetBasicAuth(basicuser, basicpass)
 	}

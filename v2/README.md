@@ -24,25 +24,14 @@ The wants are cross-server. However, currently there's no reconciliation of data
 ## Building
 
 ### Dependencies
-This contacts services for its data. By default it uses the production deployments of [Sigafoos/iv](https://github.com/Sigafoos/iv) for the rank commands and [Sigafoos/pokewants](https://github.com/sigafoos/pokewants) for want.
-
-These can be overwritten by setting the `wanturl` and `rankurl` environment variables.
+* ranking service: for `rank azumarill 4 1 3`, etc
+* want service: for wanting/unwanting Pokemon
 
 ### Running
-You'll need a `config.yml` (or json, or toml, or whatever [spf13/viper](github.com/spf13/viper) accepts. Using yaml:
+You'll need to specify a few environment variables:
 
-```yaml
-token:
-  prod: abc413
-```
-
-Where `abc413` is the bot token generated in the Discord developer console. `prod` is required, but you can have any number of them to run as different bots (for instance, a `dev` bot to test on).
-
-If your instance of `pokewants` requires basic auth, you'll need to include that in the config as well:
-
-```yaml
-want:
-  basicauth:
-    user: foo
-    pass: bar
-```
+* `DISCORD_TOKEN`: the bot token generated in the Discord developer console
+* `DISCORD_OWNER` (optional): the ID of who you want to get pings when it goes up/down, ie `193777776543662081`
+* `RANK_URL`: the hostname of the ranking service (no trailing slask)
+* `WANT_URL`: the hostname of the want service (no trailing slash)
+* `WANT_BASICUSER` and `WANT_BASICPASS`: if the want service you have set requires basic auth

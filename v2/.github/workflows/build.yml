@@ -1,0 +1,30 @@
+name: Build
+on:
+    push:
+        tags:
+            - v2.*
+jobs:
+    build:
+        name: go build
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v1
+              with:
+                  fetch-depth: 1
+
+            - name: build image
+              uses: actions/docker/cli@master
+              with:
+                  args: build -t dconley23/wobbotfet:${{github.sha}} v2
+
+            - name: login to DockerHub
+              uses: actions/docker/login@master
+              env:
+                  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+                  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: push to DockerHub
+              uses: actions/docker/cli@master
+              with:
+                  args: push dconley23/wobbotfet

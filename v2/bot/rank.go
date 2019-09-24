@@ -16,13 +16,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var rankURL = "https://ivservice.herokuapp.com/iv?pokemon=%s&ivs=%v/%v/%v"
+var (
+	rankBase = os.Getenv("RANK_URL")
+	rankURL  = rankBase + "/iv?pokemon=%s&ivs=%v/%v/%v"
+)
 
 func init() {
-	url := os.Getenv("rankurl")
-	if url != "" {
-		rankURL = url
-	}
 	registerCommand("rank", rank, "`rank azumarill 4 1 3` to see the rank (out of 4096 possible combinations) of your IV spread's stat product")
 	registerCommand("vrank", verboseRank, "`vrank azumarill 4 1 3` to get the same rank as `rank` with the values used in its calculation")
 	registerCommand("betterthan", betterthanRank, "`betterthan azumarill 4 1 3` to see the chances of getting a better Pokemon from a variety of situations")
