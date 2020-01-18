@@ -8,10 +8,12 @@ jobs:
         name: go build
         runs-on: ubuntu-latest
         steps:
-            - name: build container
+            - name: checkout
               uses: actions/checkout@v1
               with:
                   fetch-depth: 1
+
+            - name: build
               run: docker build -t ${{ secrets.DOCKER_USERNAME }}/wobbotfet:${{github.sha}} v2
 
             - name: push to DockerHub
