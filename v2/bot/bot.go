@@ -19,8 +19,8 @@ var (
 )
 
 var (
-	access     *log.Logger
-	aLog, eLog *os.File
+	access *log.Logger
+	aLog   *os.File
 )
 
 const (
@@ -74,12 +74,6 @@ func New(auth string) *Bot {
 	}
 	access = log.New(aLog, "", log.Ldate|log.Ltime)
 
-	eLog, err = os.OpenFile("error.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatalf("cannot open error log for writing: %s\n", err)
-	}
-	log.SetOutput(eLog)
-
 	session, err := discordgo.New(auth)
 	if err != nil {
 		log.Fatal(err)
@@ -126,11 +120,6 @@ func (b *Bot) Close() {
 	err := aLog.Close()
 	if err != nil {
 		log.Printf("error closing access log: %s\n", err)
-	}
-
-	err = eLog.Close()
-	if err != nil {
-		log.Printf("error closing error log: %s\n", err)
 	}
 }
 
