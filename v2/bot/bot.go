@@ -15,7 +15,7 @@ import (
 var (
 	client    = &http.Client{}
 	version   string
-	mentionre = regexp.MustCompile(`<@\d+>`)
+	mentionre = regexp.MustCompile(`<@!?\d+>`)
 )
 
 var (
