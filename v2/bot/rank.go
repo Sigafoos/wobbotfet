@@ -152,11 +152,11 @@ func parseQuery(p []string) (Query, error) {
 		Floor: floor,
 	}
 
-	if p[1] == "great" || p[1] == "ultra" || p[1] == "master" {
+	if p[0] == "great" || p[0] == "ultra" || p[0] == "master" {
 		if len(p) < 5 {
 			return q, fmt.Errorf("not enough IVs")
 		}
-		q.League = p[1]
+		q.League = p[0]
 		q.Pokemon = strings.Join(p[1:len(p)-3], " ")
 	} else {
 		q.League = "great"
