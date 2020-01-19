@@ -18,7 +18,7 @@ import (
 
 var (
 	rankBase = os.Getenv("RANK_URL")
-	rankURL  = rankBase + "/iv?pokemon=%s&ivs=%v/%v/%v"
+	rankURL  = rankBase + "/iv?pokemon=%s&ivs=%v/%v/%v&league=%s"
 )
 
 func init() {
@@ -59,12 +59,11 @@ func getRank(pieces []string, m *discordgo.MessageCreate, verbose bool, betterth
 		return err.Error()
 	}
 
-	// temp?
-	if query.League != "great" {
-		return "sorry, but I only know how to handle great league right now"
+	if query.League == "master" {
+		return "sorry, only `great` and `ultra` are supported"
 	}
 
-	parsedURL := fmt.Sprintf(rankURL, url.QueryEscape(query.Pokemon), atk, def, hp)
+	parsedURL := fmt.Sprintf(rankURL, url.QueryEscape(query.Pokemon), atk, def, hp, query.League)
 	req, err := http.NewRequest(http.MethodGet, parsedURL, nil)
 	if err != nil {
 		log.Println(err)
@@ -157,7 +156,7 @@ func parseQuery(p []string) (Query, error) {
 		if len(p) < 5 {
 			return q, fmt.Errorf("not enough IVs")
 		}
-		q.League = p[0]
+		q.League = p[1]
 		q.Pokemon = strings.Join(p[1:len(p)-3], " ")
 	} else {
 		q.League = "great"
