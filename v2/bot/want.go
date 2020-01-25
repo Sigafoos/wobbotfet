@@ -327,9 +327,9 @@ func getRole(roleName, guildID string, s *discordgo.Session) *discordgo.Role {
 }
 
 func init() {
-	url := os.Getenv("wanturl")
-	if url != "" {
-		wantURL = url
+	if wantURL == "" {
+		log.Println("no WANT_URL specified; cannot run want command")
+		return
 	}
 	registerCommand("want", want, "`want wobbuffet` to add to your wants")
 	registerCommand("unwant", unwant, "`unwant wobbuffet` to remove from your wants")

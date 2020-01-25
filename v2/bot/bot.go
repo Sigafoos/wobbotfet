@@ -84,6 +84,8 @@ func New(auth string) *Bot {
 
 	if owner := os.Getenv("DISCORD_OWNER"); owner != "" {
 		b.owner = &discordgo.User{ID: owner}
+	} else {
+		log.Println("no DISCORD_OWNER specified; will not PM owner")
 	}
 
 	return b
@@ -104,7 +106,6 @@ func (b *Bot) Start() {
 	if version != "" {
 		b.session.UpdateStatus(0, version)
 	}
-	b.PM("starting")
 	cmds := "known commands:\n"
 	for k := range commands {
 		cmds += "- " + k + "\n"
