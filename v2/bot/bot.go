@@ -38,7 +38,10 @@ type Bot struct {
 type command func([]string, *discordgo.MessageCreate, *discordgo.Session) string
 type commandMap map[string]command
 
-var commands commandMap
+var (
+	commands  commandMap
+	activePMs map[string]command
+)
 
 var help []string
 
@@ -50,11 +53,26 @@ func init() {
 	FloorMap["research"] = FloorHatched
 
 	commands = make(map[string]command)
+	activePMs = make(map[string]command)
 }
 
 func registerCommand(key string, f command, helpText string) {
 	commands[key] = f
 	help = append(help, fmt.Sprintf("**%s**: %s", key, helpText))
+}
+
+// say "hey I'm expecting a PM from this user about something"
+func expectPM(pm string, next command) {
+	activePMs[pm] = next
+}
+
+func startPM(s *discordgo.Session, user string) *discordgo.Channel {
+	pm, err := s.UserChannelCreate(user)
+	if err != nil {
+		log.Printf("error starting PM: %s", err.Error())
+		return nil
+	}
+	return pm
 }
 
 type Query struct {
@@ -166,12 +184,13 @@ func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	message := mentionre.ReplaceAllString(m.Content, "")
 	message = strings.Replace(message, "  ", " ", -1)
 	message = strings.TrimSpace(message)
-	message = strings.ToLower(message)
-	pieces := strings.Split(message, " ")
+	pieces := strings.Split(strings.ToLower(message), " ")
 
 	var response string
-	f, ok := commands[pieces[0]]
-	if !ok {
+	if pm, ok := activePMs[m.ChannelID]; ok {
+		// we don't want to lowercase PM responses
+		response = pm(strings.Split(message, " "), m, s)
+	} else if f, ok := commands[pieces[0]]; !ok {
 		response = fmt.Sprintf("I don't have a `%s` command", pieces[0])
 	} else {
 		response = f(pieces[1:], m, s)
