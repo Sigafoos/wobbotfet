@@ -23,7 +23,7 @@ var (
 
 func init() {
 	if rankBase == "" {
-		log.Println("no RANK_URL specified; cannot run pvp command")
+		log.Println("no RANK_URL specified; cannot run rank command")
 		return
 	}
 	registerCommand("rank", rank, "`rank azumarill 4 1 3` to see the rank (out of 4096 possible combinations) of your IV spread's stat product")

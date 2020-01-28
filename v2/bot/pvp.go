@@ -48,6 +48,9 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 	case "help":
 		return p.Help()
 	case "register":
+		if m.GuildID == "" {
+			return "You have to ask me this in a server!"
+		}
 		p.AskForIGN(m, s)
 		return "I'll PM you for details!"
 	case "list":
@@ -172,6 +175,10 @@ func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discor
 		delete(p.registering, m.Author.ID)
 		expectPM(m.ChannelID, p.AskForFriendCode)
 		return "Okay, let's start over. What's your in-game name?"
+	}
+	if response == "c" || response == "cancel" || response == "stop" || response == "unsubscribe" {
+		delete(p.registering, m.Author.ID)
+		return "Okay, start again when you're ready"
 	}
 
 	expectPM(m.ChannelID, p.ConfirmInfo)
