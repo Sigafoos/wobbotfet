@@ -8,11 +8,16 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Sigafoos/pvpservice/pvp"
 	"github.com/bwmarrin/discordgo"
+)
+
+const (
+	BattleTime = 30
 )
 
 var (
@@ -31,12 +36,12 @@ func init() {
 
 type PVP struct {
 	registering map[string]pvp.Player
-	battling    map[string]time.Timer
+	battling    map[string]map[string]*time.Timer
 }
 
 func newPVP() *PVP {
 	registering := make(map[string]pvp.Player)
-	battling := make(map[string]time.Timer)
+	battling := make(map[string]map[string]*time.Timer)
 	return &PVP{
 		registering: registering,
 		battling:    battling,
@@ -44,23 +49,70 @@ func newPVP() *PVP {
 }
 
 func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	if m.GuildID == "" {
+		return "You can only ask this in a server!"
+	}
+
 	switch pieces[0] {
 	case "help":
 		return p.Help()
 	case "register":
-		if m.GuildID == "" {
-			return "You have to ask me this in a server!"
-		}
 		p.AskForIGN(m, s)
 		return "I'll PM you for details!"
-	case "list":
-		return p.ListPlayers(m, s)
+	case "battle":
+		return p.LookingForBattle(pieces[1:], m, s)
 	}
 	return fmt.Sprintf("I don't have a command `pvp %s`", pieces[0])
 }
 
 func (p *PVP) Help() string {
 	return "`pvp register`: sign up for PVP battles! I'll PM you to ask for your information."
+}
+
+func (p *PVP) LookingForBattle(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	length := BattleTime
+	if len(pieces) > 0 {
+		if pieces[0] == "0" || pieces[0] == "stop" || pieces[0] == "end" {
+			return p.StopBattling(m)
+		}
+		l, err := strconv.Atoi(pieces[0])
+		if err != nil {
+			return fmt.Sprintf("`%s` doesn't seem to be a number", pieces[0])
+		}
+		length = l
+	}
+	return p.StartBattling(length, m, s)
+}
+
+func (p *PVP) StartBattling(length int, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	log.Printf("%v minute timer starting", length)
+	if _, ok := p.battling[m.GuildID]; !ok {
+		p.battling[m.GuildID] = make(map[string]*time.Timer)
+	}
+
+	p.battling[m.GuildID][m.Author.ID] = time.AfterFunc(time.Duration(length)*time.Minute, func() {
+		s.ChannelMessageSend(m.ChannelID, "youre not battling anymore")
+		log.Println("timer up")
+		delete(p.battling[m.GuildID], m.Author.ID)
+	})
+
+	// actually dont return a string, and have it ping the channel
+	return fmt.Sprintf("you're looking for battles for the next %v minutes!", length)
+}
+
+func (p *PVP) StopBattling(m *discordgo.MessageCreate) string {
+	server, ok := p.battling[m.GuildID]
+	if !ok {
+		return "You aren't currently looking for battles!"
+	}
+	timer, ok := server[m.Author.ID]
+	if !ok {
+		return "You aren't currently looking for battles!"
+	}
+	timer.Stop()
+	delete(p.battling[m.GuildID], m.Author.ID)
+	// TODO the group
+	return "You're no longer looking for battles"
 }
 
 func (p *PVP) GetPlayers(server string) []pvp.Player {
@@ -94,10 +146,9 @@ func (p *PVP) GetPlayers(server string) []pvp.Player {
 	return players
 }
 
+// ListPlayers returns a list of participants in PVP. It's currently unused, as we decided
+// it was better to not allow randos to see friend codes.
 func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
-	if m.GuildID == "" {
-		return "You can only ask this in a server!"
-	}
 	var guildName string
 	guild, err := s.Guild(m.GuildID)
 	if err != nil {
