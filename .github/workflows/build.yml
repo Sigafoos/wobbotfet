@@ -5,6 +5,17 @@ on:
             - v2.*
 
 jobs:
+    debug:
+        name: Debug
+        runs-on: ubuntu-latest
+        steps:
+            - name: Dump env
+              run: env | sort
+            - name: Dump github
+              env:
+                  GITHUB_CONTECT: ${{ toJson(github) }}
+              run: echo "$GITHUB_CONTEXT"
+
     build:
         name: go build
         runs-on: ubuntu-latest
