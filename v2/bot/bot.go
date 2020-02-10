@@ -14,7 +14,6 @@ import (
 
 var (
 	client    = &http.Client{}
-	version   string
 	mentionre = regexp.MustCompile(`<@!?\d+>`)
 )
 
@@ -121,8 +120,8 @@ func (b *Bot) Start() {
 			log.Printf("error opening PM with owner: %s", err.Error())
 		}
 	}
-	if version != "" {
-		b.session.UpdateStatus(0, version)
+	if os.Getenv("VERSION") != "" {
+		b.session.UpdateStatus(0, os.Getenv("VERSION"))
 	}
 	cmds := "known commands:\n"
 	for k := range commands {

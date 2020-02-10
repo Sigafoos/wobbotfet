@@ -9,8 +9,8 @@ FROM alpine:latest AS certs
 RUN apk --no-cache add ca-certificates
 
 FROM scratch
-ENV PORT 4080
-EXPOSE 4080
+ARG version
+ENV VERSION=$version
 COPY --from=build /app/wobbotfet .
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["./wobbotfet"]

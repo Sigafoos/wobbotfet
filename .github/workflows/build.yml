@@ -15,7 +15,7 @@ jobs:
                   fetch-depth: 1
 
             - name: build
-              run: docker build -t ${{ secrets.DOCKER_USERNAME }}/wobbotfet:${{github.event.ref}} v2
+              run: docker build --build-arg version=${{github.event.ref}} -t ${{ secrets.DOCKER_USERNAME }}/wobbotfet:${{github.event.ref}} v2
 
             - name: push to DockerHub
               uses: azure/docker-login@v1
