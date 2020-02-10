@@ -58,17 +58,28 @@ func newPVP() *PVP {
 }
 
 func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
-	if m.GuildID == "" {
-		return "You can only ask this in a server!"
-	}
-
 	switch pieces[0] {
 	case "help":
 		return p.Help()
 	case "register":
+		if m.GuildID == "" {
+			return "You can only do this in a server!"
+		}
+
 		p.AskForIGN(m, s)
 		return "I'll PM you for details!"
+	case "list":
+		if m.GuildID != "" {
+			return "You have to ask this in a PM, sorry!"
+		}
+
+		return p.ListPlayers(m, s)
+
 	case "battle":
+		if m.GuildID == "" {
+			return "You can only do this in a server!"
+		}
+
 		return p.LookingForBattle(pieces[1:], m, s)
 	}
 	return fmt.Sprintf("I don't have a command `pvp %s`", pieces[0])
@@ -157,7 +168,7 @@ func (p *PVP) GetPlayers(server string) []pvp.Player {
 
 // ListPlayers returns a list of participants in PVP. It's currently unused, as we decided
 // it was better to not allow randos to see friend codes.
-func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
+func (p *PVP) deprecatedListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
 	var guildName string
 	guild, err := s.Guild(m.GuildID)
 	if err != nil {
@@ -333,6 +344,59 @@ func (p *PVP) RegisterPlayer(ID string, s *discordgo.Session) string {
 		}
 	}
 	return message
+}
+
+func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
+	req, err := http.NewRequest(http.MethodGet, pvpURL+"/player?id="+m.Author.ID, nil)
+	if err != nil {
+		log.Printf("error getting player request: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+	req.Header.Add("Content-Type", applicationJSON)
+	req.Header.Add("Accept", applicationJSON)
+
+	response, err := client.Do(req)
+	if err != nil {
+		log.Printf("error performing player list request: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+	var user pvp.Player
+	b, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Printf("error reading player list body: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+	err = json.Unmarshal(b, &user)
+	if err != nil {
+		log.Printf("error decoding player list body: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+
+	if len(user.Servers) == 0 {
+		return "you aren't in any servers!"
+	}
+
+	var list string
+	for _, server := range user.Servers {
+		var guildName string
+		guild, err := s.Guild(server)
+		if err != nil {
+			log.Printf("error getting guild name from id: %s", err.Error())
+			guildName = "Unknown server"
+		} else {
+			guildName = guild.Name
+		}
+
+		list += fmt.Sprintf("**%s**\n", guildName)
+		for _, player := range p.GetPlayers(server) {
+			list += player.ToString() + "\n"
+		}
+		list += "\n"
+	}
+	return list
 }
 
 func (p *PVP) parseAnswer(pieces []string) Answer {
