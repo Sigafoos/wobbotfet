@@ -1,7 +1,8 @@
 name: Build
 on:
-    release:
-        types: [created]
+    create:
+        tags:
+            - v2.*
 
 jobs:
     build:
