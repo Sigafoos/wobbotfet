@@ -66,8 +66,20 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 			return "You can only do this in a server!"
 		}
 
-		p.AskForIGN(m, s)
-		return "I'll PM you for details!"
+		user := p.getUser(m.Author.ID)
+
+		if user == nil {
+			p.AskForIGN(m, s)
+			return "I'll PM you for details!"
+		}
+
+		user.Server = m.GuildID
+		resp := p.RegisterPlayer(user, s)
+		if resp != "" {
+			return resp
+		}
+		return "You're all set! I'll PM you the friend codes."
+
 	case "list":
 		if m.GuildID != "" {
 			return "You have to ask this in a PM, sorry!"
@@ -260,12 +272,18 @@ func (p *PVP) EggForUltra(pieces []string, m *discordgo.MessageCreate, s *discor
 }
 
 func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
-	if _, ok := p.registering[m.Author.ID]; !ok {
+	player, ok := p.registering[m.Author.ID]
+	if !ok {
 		return "Well this is awkward. You need to start the registration process over. Sorry!"
 	}
 	response := p.parseAnswer(pieces)
 	if response == AnswerYes {
-		return p.RegisterPlayer(m.Author.ID, s)
+		success := p.CreatePlayer(player)
+		// this is also where you should fix this shitty solution
+		if success != "" {
+			return success
+		}
+		return p.RegisterPlayer(&player, s)
 	}
 	if response == AnswerNo {
 		delete(p.registering, m.Author.ID)
@@ -281,17 +299,23 @@ func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discor
 	return fmt.Sprintf("Sorry, I don't understand the answer '%s'. Please say 'yes' or 'no'.", strings.Join(pieces, " "))
 }
 
-func (p *PVP) RegisterPlayer(ID string, s *discordgo.Session) string {
-	player, ok := p.registering[ID]
-	if !ok {
-		return "Well this is awkward. You need to start the registration process over. Sorry!"
+func (p *PVP) RegisterPlayer(player *pvp.Player, s *discordgo.Session) string {
+	resp := p.RegisterOnServer(player)
+	if resp != "" {
+		return resp
 	}
+
+	return p.pmFriendList(player, s)
+}
+
+// TODO returning a string sucks
+func (p *PVP) CreatePlayer(player pvp.Player) string {
 	b, err := json.Marshal(&player)
 	if err != nil {
 		log.Printf("error marshalling player json: %s", err.Error())
 		return "sorry, something's gone wrong"
 	}
-	req, err := http.NewRequest(http.MethodPost, pvpURL+"/register", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPost, pvpURL+"/player", bytes.NewReader(b))
 	if err != nil {
 		log.Printf("error creating player request: %s", err.Error())
 		return "sorry, something's gone wrong"
@@ -317,20 +341,60 @@ func (p *PVP) RegisterPlayer(ID string, s *discordgo.Session) string {
 		return "uh oh, something went wrong"
 	}
 
+	return ""
+}
+
+func (p *PVP) RegisterOnServer(player *pvp.Player) string {
+	// this is actually sending along all of a player's data when we really just need the server and user id
+	b, err := json.Marshal(&player)
+	if err != nil {
+		log.Printf("error marshalling register json: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+	req, err := http.NewRequest(http.MethodPost, pvpURL+"/register", bytes.NewReader(b))
+	if err != nil {
+		log.Printf("error creating register request: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+	req.Header.Add("Content-Type", applicationJSON)
+	req.Header.Add("Accept", applicationJSON)
+
+	response, err := client.Do(req)
+	if err != nil {
+		log.Printf("error performing register request: %s", err.Error())
+		return "sorry, something's gone wrong"
+	}
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
+	if response.StatusCode == http.StatusConflict {
+		return "Wait, you're registered already!"
+	}
+
+	if response.StatusCode != http.StatusCreated {
+		log.Printf("error registering user: got %v\n", response.StatusCode)
+		return "uh oh, something went wrong"
+	}
+
+	return ""
+}
+
+func (p *PVP) pmFriendList(player *pvp.Player, s *discordgo.Session) string {
 	players := p.GetPlayers(player.Server)
 
-	message := "You're all set!"
+	var guildName string
+	guild, err := s.Guild(player.Server)
+	if err != nil {
+		log.Printf("error getting guild id for %s: %s", player.Server, err.Error())
+		guildName = "a server you're in"
+	} else {
+		guildName = guild.Name
+	}
+	message := fmt.Sprintf("You're registered for PVP on %s!", guildName)
 
 	if len(players) > 1 {
 		message += " Here's who you need to send a friend request to (they've been told it's coming):\n\n"
-		var guildName string
-		guild, err := s.Guild(player.Server)
-		if err != nil {
-			log.Printf("error getting guild id for %s: %s", player.Server, err.Error())
-			guildName = "a server you're in"
-		} else {
-			guildName = guild.Name
-		}
 		for _, opponent := range players {
 			if opponent.ID != player.ID {
 				message += opponent.ToString() + "\n"
@@ -343,14 +407,18 @@ func (p *PVP) RegisterPlayer(ID string, s *discordgo.Session) string {
 			}
 		}
 	}
-	return message
+	pm := startPM(s, player.ID)
+	if pm != nil {
+		s.ChannelMessageSend(pm.ID, message)
+	}
+	return ""
 }
 
-func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
-	req, err := http.NewRequest(http.MethodGet, pvpURL+"/player?id="+m.Author.ID, nil)
+func (p *PVP) getUser(id string) *pvp.Player {
+	req, err := http.NewRequest(http.MethodGet, pvpURL+"/player?id="+id, nil)
 	if err != nil {
 		log.Printf("error getting player request: %s", err.Error())
-		return "sorry, something's gone wrong"
+		return nil
 	}
 	req.Header.Add("Content-Type", applicationJSON)
 	req.Header.Add("Accept", applicationJSON)
@@ -358,23 +426,35 @@ func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) stri
 	response, err := client.Do(req)
 	if err != nil {
 		log.Printf("error performing player list request: %s", err.Error())
-		return "sorry, something's gone wrong"
+		return nil
 	}
 	if response.Body != nil {
 		defer response.Body.Close()
 	}
 	var user pvp.Player
 	b, err := ioutil.ReadAll(response.Body)
+
+	if len(b) == 0 {
+		return nil
+	}
+
 	if err != nil {
 		log.Printf("error reading player list body: %s", err.Error())
-		return "sorry, something's gone wrong"
+		return nil
 	}
 	err = json.Unmarshal(b, &user)
 	if err != nil {
-		log.Printf("error decoding player list body: %s", err.Error())
-		return "sorry, something's gone wrong"
+		log.Printf("error decoding player list body: %s (%s)", err.Error(), string(b))
+		return nil
 	}
+	return &user
+}
 
+func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
+	user := p.getUser(m.Author.ID)
+	if user == nil {
+		return "you aren't registered!"
+	}
 	if len(user.Servers) == 0 {
 		return "you aren't in any servers!"
 	}
