@@ -22,6 +22,8 @@ github.com/Sigafoos/pokemongo v0.3.0 h1:1Yo5KgU1VeX+l0JazVY/I2xQoU5BRhancZ+YeIT6
 github.com/Sigafoos/pokemongo v0.3.0/go.mod h1:6xyWuT2o56NXsfeN7bqNnMlhSxYbChPx8EMhuJDNQt4=
 github.com/Sigafoos/pvpservice v1.1.0 h1:EWelEEUtIc47lIo1HaNaY90+TDv2qFONh0k8rwXbF88=
 github.com/Sigafoos/pvpservice v1.1.0/go.mod h1:Ffref32Ee6StHHUzUKyKH5V3QEq6Vvc2/r/q0EfwKGE=
+github.com/Sigafoos/pvpservice v1.4.0 h1:q4QfaP3PoK1bfSCxUuPrCGnL8BTVc3PSPwxjZuL9584=
+github.com/Sigafoos/pvpservice v1.4.0/go.mod h1:Ffref32Ee6StHHUzUKyKH5V3QEq6Vvc2/r/q0EfwKGE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=

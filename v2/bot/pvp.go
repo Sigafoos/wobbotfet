@@ -45,14 +45,17 @@ const (
 
 type PVP struct {
 	registering map[string]pvp.Player
+	friendship  map[string]string
 	battling    map[string]map[string]*time.Timer
 }
 
 func newPVP() *PVP {
 	registering := make(map[string]pvp.Player)
+	friendship := make(map[string]string)
 	battling := make(map[string]map[string]*time.Timer)
 	return &PVP{
 		registering: registering,
+		friendship:  friendship,
 		battling:    battling,
 	}
 }
@@ -86,6 +89,35 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 		}
 
 		return p.ListPlayers(m, s)
+
+	case "ultra":
+		user := p.getUser(m.Author.ID)
+		if user == nil {
+			return "you aren't registered!"
+		}
+		if len(user.Servers) == 0 {
+			return "you aren't in any servers!"
+		}
+		toFriend := p.NotUltraForPlayer(user)
+
+		if pieces[1] == "todo" {
+			if m.GuildID != "" {
+				return "you can only ask for your to-be-ultra list in a PM"
+			}
+			var todo []string
+			for _, player := range toFriend {
+				todo = append(todo, player.ToString())
+			}
+			return fmt.Sprintf("Here's who you still need to reach ultra with:\n\n%s\n\nTell me `pvp ultra (IGN)` to list yourself as ultra (I'll confirm with them first!)", strings.Join(todo, "\n"))
+		}
+
+		// are you able to friend this person?
+		for ign, player := range toFriend {
+			if strings.ToLower(ign) == pieces[1] {
+				return p.ConfirmFriendship(user, &player, s)
+			}
+		}
+		return fmt.Sprintf("`%s` isn't someone you're in a PVP server with. Did you mean `pvp ultra todo` for the list of players you need to friend?", pieces[1])
 
 	case "battle":
 		if m.GuildID == "" {
@@ -278,6 +310,8 @@ func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discor
 	}
 	response := p.parseAnswer(pieces)
 	if response == AnswerYes {
+		// either way they'll need to start over
+		delete(p.registering, m.Author.ID)
 		success := p.CreatePlayer(player)
 		// this is also where you should fix this shitty solution
 		if success != "" {
@@ -286,7 +320,6 @@ func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discor
 		return p.RegisterPlayer(&player, s)
 	}
 	if response == AnswerNo {
-		delete(p.registering, m.Author.ID)
 		expectPM(m.ChannelID, p.AskForFriendCode)
 		return "Okay, let's start over. What's your in-game name?"
 	}
@@ -477,6 +510,159 @@ func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) stri
 		list += "\n"
 	}
 	return list
+}
+
+func (p *PVP) NotUltraForPlayer(user *pvp.Player) map[string]pvp.Player {
+	friends := make(map[string]bool)
+	toFriend := make(map[string]pvp.Player)
+	for _, friend := range p.getFriends(user.ID) {
+		friends[friend.IGN] = true
+	}
+
+	for _, server := range user.Servers {
+		for _, player := range p.GetPlayers(server) {
+			if player.ID == user.ID {
+				continue
+			}
+			// are they an ultra friend already?
+			if _, isUltra := friends[player.IGN]; !isUltra {
+				// do we already know they need to be friends?
+				if _, known := toFriend[player.IGN]; !known {
+					toFriend[player.IGN] = player
+				}
+			}
+		}
+	}
+	return toFriend
+}
+
+// ConfirmFriendship asks the person being friended if they are in fact ultra. If multiple people ask at the same time it will overwrite all but the most recent. I could do this better, but don't expect it will be an issue for now.
+func (p *PVP) ConfirmFriendship(user, friend *pvp.Player, s *discordgo.Session) string {
+	p.friendship[friend.ID] = user.ID
+	log.Println("about to start confirm OM")
+	pm := startPM(s, friend.ID)
+	if pm != nil {
+		expectPM(pm.ID, p.AddFriend)
+		message := fmt.Sprintf("Hi! %s (%s) says you're ultra friends. Can you confirm this?", user.IGN, user.Username)
+		s.ChannelMessageSend(pm.ID, message)
+		return "Okay, I'll confirm with them that you're ultra friends"
+	}
+	delete(p.friendship, friend.ID)
+	return "Sorry, something went wrong and I can't PM them to confirm"
+}
+
+func (p *PVP) AddFriend(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	response := p.parseAnswer(pieces)
+	if response == AnswerYes {
+		id, ok := p.friendship[m.Author.ID]
+		if !ok {
+			return "This is strange, but I seem to have lost your friendship request. Can you and your friend try agaun? Sorry!"
+		}
+
+		// even if it fails they'll need to start again
+		delete(p.friendship, m.Author.ID)
+
+		friendship := pvp.Friendship{
+			User:   id,
+			Friend: m.Author.ID,
+		}
+
+		b, err := json.Marshal(&friendship)
+		if err != nil {
+			log.Printf("error marshalling friendship json: %s", err.Error())
+			return "sorry, something's gone wrong"
+		}
+		req, err := http.NewRequest(http.MethodPost, pvpURL+"/player/friend", bytes.NewReader(b))
+		if err != nil {
+			log.Printf("error creating friendship request: %s", err.Error())
+			return "sorry, something's gone wrong"
+		}
+		req.Header.Add("Content-Type", applicationJSON)
+		req.Header.Add("Accept", applicationJSON)
+
+		response, err := client.Do(req)
+		if err != nil {
+			log.Printf("error performing friendship request: %s", err.Error())
+			return "sorry, something's gone wrong"
+		}
+		if response.Body != nil {
+			defer response.Body.Close()
+		}
+
+		if response.StatusCode == http.StatusConflict {
+			return "You two seem to be friends already. This is weird."
+		}
+
+		if response.StatusCode != http.StatusCreated {
+			log.Printf("error registering friendship: got %v\n", response.StatusCode)
+			return "uh oh, something went wrong"
+		}
+
+		// if there's an error PMing it's not the end of the world
+		log.Println("about to start has confirmed OM")
+		pm := startPM(s, id)
+		if pm != nil {
+			user := p.getUser(m.Author.ID)
+			message := fmt.Sprintf("Hi! %s (%s) has confirmed your friendship", user.IGN, user.Username)
+			s.ChannelMessageSend(pm.ID, message)
+		}
+
+		// TODO check both for "core member" status (#8)
+		return "Thanks for confirming!"
+	}
+
+	if response == AnswerNo || response == AnswerCancel {
+		id, ok := p.friendship[m.Author.ID]
+		if ok {
+			log.Println("about to start mo OM")
+			pm := startPM(s, id)
+			if pm != nil {
+				user := p.getUser(m.Author.ID)
+				message := fmt.Sprintf("Hi! %s (%s) says you're aren't actually ultra friends. Please confer with them and try again.", user.IGN, user.Username)
+				s.ChannelMessageSend(pm.ID, message)
+			}
+		}
+		delete(p.friendship, m.Author.ID)
+		return "Sorry for bothering you! I've let them know."
+	}
+
+	expectPM(m.ChannelID, p.AddFriend)
+	return fmt.Sprintf("Sorry, I don't understand the answer '%s'. Please say 'yes' or 'no'.", strings.Join(pieces, " "))
+}
+
+func (p *PVP) getFriends(ID string) []pvp.Player {
+	var friends []pvp.Player
+	req, err := http.NewRequest(http.MethodGet, pvpURL+"/player/friend?id="+ID, nil)
+	if err != nil {
+		log.Printf("error getting player friend request: %s", err.Error())
+		return friends
+	}
+	req.Header.Add("Content-Type", applicationJSON)
+	req.Header.Add("Accept", applicationJSON)
+
+	response, err := client.Do(req)
+	if err != nil {
+		log.Printf("error performing friend list request: %s", err.Error())
+		return friends
+	}
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+	b, err := ioutil.ReadAll(response.Body)
+
+	if len(b) == 0 {
+		return friends
+	}
+
+	if err != nil {
+		log.Printf("error reading friend list body: %s", err.Error())
+		return friends
+	}
+	err = json.Unmarshal(b, &friends)
+	if err != nil {
+		log.Printf("error decoding player list body: %s (%s)", err.Error(), string(b))
+	}
+	return friends
 }
 
 func (p *PVP) parseAnswer(pieces []string) Answer {

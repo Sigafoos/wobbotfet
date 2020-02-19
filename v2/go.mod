@@ -4,7 +4,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1 // indirect
 	github.com/Sigafoos/iv/model v0.0.0-20190722131159-bd547f140bd6
 	github.com/Sigafoos/pokemongo v0.3.0
-	github.com/Sigafoos/pvpservice v1.1.0
+	github.com/Sigafoos/pvpservice v1.4.0
 	github.com/bwmarrin/discordgo v0.19.0
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gorilla/websocket v1.4.1 // indirect
