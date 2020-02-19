@@ -187,6 +187,7 @@ func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	var response string
 	if pm, ok := activePMs[m.ChannelID]; ok {
+		delete(activePMs, m.ChannelID)
 		// we don't want to lowercase PM responses
 		response = pm(strings.Split(message, " "), m, s)
 	} else if f, ok := commands[pieces[0]]; !ok {
