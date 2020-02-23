@@ -44,6 +44,7 @@ const (
 )
 
 type PVP struct {
+	session     *discordgo.Session
 	registering map[string]pvp.Player
 	friendship  map[string]string
 	battling    map[string]map[string]*time.Timer
@@ -61,6 +62,11 @@ func newPVP() *PVP {
 }
 
 func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+	// the session pointer is identical between messages. if we don't have one, or it's changed, use the current one
+	if s != p.session {
+		p.session = s
+	}
+
 	switch pieces[0] {
 	case "help":
 		return p.Help()
@@ -72,12 +78,12 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 		user := p.getUser(m.Author.ID)
 
 		if user == nil {
-			p.AskForIGN(m, s)
+			p.AskForIGN(m)
 			return "I'll PM you for details!"
 		}
 
 		user.Server = m.GuildID
-		resp := p.RegisterPlayer(user, s)
+		resp := p.RegisterPlayer(user)
 		if resp != "" {
 			return resp
 		}
@@ -88,7 +94,7 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 			return "You have to ask this in a PM, sorry!"
 		}
 
-		return p.ListPlayers(m, s)
+		return p.ListPlayers(m)
 
 	case "ultra":
 		user := p.getUser(m.Author.ID)
@@ -114,7 +120,7 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 		// are you able to friend this person?
 		for ign, player := range toFriend {
 			if strings.ToLower(ign) == pieces[1] {
-				return p.ConfirmFriendship(user, &player, s)
+				return p.ConfirmFriendship(user, &player)
 			}
 		}
 		return fmt.Sprintf("`%s` isn't someone you're in a PVP server with. Did you mean `pvp ultra todo` for the list of players you need to friend?", pieces[1])
@@ -124,7 +130,7 @@ func (p *PVP) Handle(pieces []string, m *discordgo.MessageCreate, s *discordgo.S
 			return "You can only do this in a server!"
 		}
 
-		return p.LookingForBattle(pieces[1:], m, s)
+		return p.LookingForBattle(pieces[1:], m)
 	}
 	return fmt.Sprintf("I don't have a command `pvp %s`", pieces[0])
 }
@@ -133,7 +139,7 @@ func (p *PVP) Help() string {
 	return "`pvp register`: sign up for PVP battles! I'll PM you to ask for your information."
 }
 
-func (p *PVP) LookingForBattle(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
+func (p *PVP) LookingForBattle(pieces []string, m *discordgo.MessageCreate) string {
 	length := BattleTime
 	if len(pieces) > 0 {
 		if pieces[0] == "0" || pieces[0] == "stop" || pieces[0] == "end" {
@@ -145,17 +151,17 @@ func (p *PVP) LookingForBattle(pieces []string, m *discordgo.MessageCreate, s *d
 		}
 		length = l
 	}
-	return p.StartBattling(length, m, s)
+	return p.StartBattling(length, m)
 }
 
-func (p *PVP) StartBattling(length int, m *discordgo.MessageCreate, s *discordgo.Session) string {
+func (p *PVP) StartBattling(length int, m *discordgo.MessageCreate) string {
 	log.Printf("%v minute timer starting", length)
 	if _, ok := p.battling[m.GuildID]; !ok {
 		p.battling[m.GuildID] = make(map[string]*time.Timer)
 	}
 
 	p.battling[m.GuildID][m.Author.ID] = time.AfterFunc(time.Duration(length)*time.Minute, func() {
-		s.ChannelMessageSend(m.ChannelID, "youre not battling anymore")
+		p.session.ChannelMessageSend(m.ChannelID, "youre not battling anymore")
 		log.Println("timer up")
 		delete(p.battling[m.GuildID], m.Author.ID)
 	})
@@ -234,7 +240,7 @@ func (p *PVP) deprecatedListPlayers(m *discordgo.MessageCreate, s *discordgo.Ses
 	return message
 }
 
-func (p *PVP) AskForIGN(m *discordgo.MessageCreate, s *discordgo.Session) {
+func (p *PVP) AskForIGN(m *discordgo.MessageCreate) {
 	// TODO timeout
 	p.registering[m.Author.ID] = pvp.Player{
 		ID:       m.Author.ID,
@@ -242,17 +248,17 @@ func (p *PVP) AskForIGN(m *discordgo.MessageCreate, s *discordgo.Session) {
 		Server:   m.GuildID,
 	}
 	message := "Thanks for your interest in PVP"
-	if guild, err := s.Guild(m.GuildID); err == nil {
+	if guild, err := p.session.Guild(m.GuildID); err == nil {
 		message += " at " + guild.Name
 	}
 	message += "! What's your in-game name (IGN)?"
-	pm := startPM(s, m.Author.ID)
+	pm := startPM(p.session, m.Author.ID)
 	if pm == nil {
-		s.ChannelMessageSend(m.ChannelID, "uh oh, something went wrong")
+		p.session.ChannelMessageSend(m.ChannelID, "uh oh, something went wrong")
 		return
 	}
 	expectPM(pm.ID, p.AskForFriendCode)
-	s.ChannelMessageSend(pm.ID, message)
+	p.session.ChannelMessageSend(pm.ID, message)
 }
 
 func (p *PVP) AskForFriendCode(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) string {
@@ -317,7 +323,7 @@ func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discor
 		if success != "" {
 			return success
 		}
-		return p.RegisterPlayer(&player, s)
+		return p.RegisterPlayer(&player)
 	}
 	if response == AnswerNo {
 		expectPM(m.ChannelID, p.AskForFriendCode)
@@ -332,13 +338,13 @@ func (p *PVP) ConfirmInfo(pieces []string, m *discordgo.MessageCreate, s *discor
 	return fmt.Sprintf("Sorry, I don't understand the answer '%s'. Please say 'yes' or 'no'.", strings.Join(pieces, " "))
 }
 
-func (p *PVP) RegisterPlayer(player *pvp.Player, s *discordgo.Session) string {
+func (p *PVP) RegisterPlayer(player *pvp.Player) string {
 	resp := p.RegisterOnServer(player)
 	if resp != "" {
 		return resp
 	}
 
-	return p.pmFriendList(player, s)
+	return p.pmFriendList(player)
 }
 
 // TODO returning a string sucks
@@ -413,11 +419,11 @@ func (p *PVP) RegisterOnServer(player *pvp.Player) string {
 	return ""
 }
 
-func (p *PVP) pmFriendList(player *pvp.Player, s *discordgo.Session) string {
+func (p *PVP) pmFriendList(player *pvp.Player) string {
 	players := p.GetPlayers(player.Server)
 
 	var guildName string
-	guild, err := s.Guild(player.Server)
+	guild, err := p.session.Guild(player.Server)
 	if err != nil {
 		log.Printf("error getting guild id for %s: %s", player.Server, err.Error())
 		guildName = "a server you're in"
@@ -432,17 +438,17 @@ func (p *PVP) pmFriendList(player *pvp.Player, s *discordgo.Session) string {
 			if opponent.ID != player.ID {
 				message += opponent.ToString() + "\n"
 
-				pm := startPM(s, opponent.ID)
+				pm := startPM(p.session, opponent.ID)
 				if pm != nil {
 					joinPM := fmt.Sprintf("Hey there, %s! You'll be getting a friend request from %s soon, because they just signed up for PVP on %s!", opponent.IGN, player.IGN, guildName)
-					s.ChannelMessageSend(pm.ID, joinPM)
+					p.session.ChannelMessageSend(pm.ID, joinPM)
 				}
 			}
 		}
 	}
-	pm := startPM(s, player.ID)
+	pm := startPM(p.session, player.ID)
 	if pm != nil {
-		s.ChannelMessageSend(pm.ID, message)
+		p.session.ChannelMessageSend(pm.ID, message)
 	}
 	return ""
 }
@@ -483,7 +489,7 @@ func (p *PVP) getUser(id string) *pvp.Player {
 	return &user
 }
 
-func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) string {
+func (p *PVP) ListPlayers(m *discordgo.MessageCreate) string {
 	user := p.getUser(m.Author.ID)
 	if user == nil {
 		return "you aren't registered!"
@@ -495,7 +501,7 @@ func (p *PVP) ListPlayers(m *discordgo.MessageCreate, s *discordgo.Session) stri
 	var list string
 	for _, server := range user.Servers {
 		var guildName string
-		guild, err := s.Guild(server)
+		guild, err := p.session.Guild(server)
 		if err != nil {
 			log.Printf("error getting guild name from id: %s", err.Error())
 			guildName = "Unknown server"
@@ -537,14 +543,14 @@ func (p *PVP) NotUltraForPlayer(user *pvp.Player) map[string]pvp.Player {
 }
 
 // ConfirmFriendship asks the person being friended if they are in fact ultra. If multiple people ask at the same time it will overwrite all but the most recent. I could do this better, but don't expect it will be an issue for now.
-func (p *PVP) ConfirmFriendship(user, friend *pvp.Player, s *discordgo.Session) string {
+func (p *PVP) ConfirmFriendship(user, friend *pvp.Player) string {
 	p.friendship[friend.ID] = user.ID
 	log.Println("about to start confirm OM")
-	pm := startPM(s, friend.ID)
+	pm := startPM(p.session, friend.ID)
 	if pm != nil {
 		expectPM(pm.ID, p.AddFriend)
 		message := fmt.Sprintf("Hi! %s (%s) says you're ultra friends. Can you confirm this?", user.IGN, user.Username)
-		s.ChannelMessageSend(pm.ID, message)
+		p.session.ChannelMessageSend(pm.ID, message)
 		return "Okay, I'll confirm with them that you're ultra friends"
 	}
 	delete(p.friendship, friend.ID)
@@ -604,7 +610,7 @@ func (p *PVP) AddFriend(pieces []string, m *discordgo.MessageCreate, s *discordg
 		if pm != nil {
 			user := p.getUser(m.Author.ID)
 			message := fmt.Sprintf("Hi! %s (%s) has confirmed your friendship", user.IGN, user.Username)
-			s.ChannelMessageSend(pm.ID, message)
+			p.session.ChannelMessageSend(pm.ID, message)
 		}
 
 		// TODO check both for "core member" status (#8)
@@ -619,7 +625,7 @@ func (p *PVP) AddFriend(pieces []string, m *discordgo.MessageCreate, s *discordg
 			if pm != nil {
 				user := p.getUser(m.Author.ID)
 				message := fmt.Sprintf("Hi! %s (%s) says you're aren't actually ultra friends. Please confer with them and try again.", user.IGN, user.Username)
-				s.ChannelMessageSend(pm.ID, message)
+				p.session.ChannelMessageSend(pm.ID, message)
 			}
 		}
 		delete(p.friendship, m.Author.ID)
