@@ -21,11 +21,17 @@ If wobbotfet has been granted the ability to manage roles it will add/remove a r
 
 The wants are cross-server. However, currently there's no reconciliation of data if you want in one server to add the role in another. A "fix" is to unwant and then want the Pokemon in the server without the role (or vice versa).
 
+#### PVP
+* `pvp register` to sign up for remote battles on a server: it will PM you to ask for friend code/etc (cross server, only need to do once), and then PM you the codes of everyone you need to add. It also PMs everyone else who's registered to let them know you aren't a rando
+* `pvp list` (PM only) to see the info of everyone in all your servers
+* `pvp ultra todo` (PM only) to see the list of who you need to be ultra friends with
+* `pvp ultra (IGN)` to indicate that you're ultra friends with (IGN). They'll be PMed to confirm, and you can only add people you're registered in servers with (no spamming Kieng or Toshi, sorry). Cross server, so you only need to do it with each person once. 
 ## Building
 
 ### Dependencies
 * ranking service: for `rank azumarill 4 1 3`, etc
 * want service: for wanting/unwanting Pokemon
+* pvp service: for PVP functionality
 
 ### Running
 You'll need to specify a few environment variables:
