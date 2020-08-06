@@ -148,6 +148,23 @@ func (b *Bot) PM(message string) {
 	b.session.ChannelMessageSend(b.pm.ID, message)
 }
 
+// Servers returns a list of server ids the bot is connected to. It will use its session to fill in the server details.
+func (b *Bot) Servers() ([]*discordgo.UserGuild, error) {
+	servers, err := b.session.UserGuilds(100, "", "")
+	return servers, err
+}
+
+// ActivePMs returns a list of open PM channels.
+func (b *Bot) ActivePMs() []string {
+	pms := make([]string, len(activePMs))
+	i := 0
+	for k, _ := range activePMs {
+		pms[i] = k
+		i++
+	}
+	return pms
+}
+
 func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	defer func() {
 		if r := recover(); r != nil {
