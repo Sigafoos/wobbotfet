@@ -37,6 +37,7 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 
 	var succeeded []string
 	var failed []string
+	var roleFailed []string
 	for _, w := range pieces {
 		formattedName := "`" + w + "`"
 		access.Printf("%s\t%s\t%s\twant\t%s\n", m.GuildID, m.ChannelID, m.Author.String(), w)
@@ -84,7 +85,9 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 			return "uh oh, something went wrong"
 		}
 		succeeded = append(succeeded, formattedName)
-		addRole(w, m, s)
+		if err := addRole(w, m, s); err != nil {
+			roleFailed = append(roleFailed, formattedName)
+		}
 	}
 	var message string
 	if len(succeeded) > 0 {
@@ -95,6 +98,12 @@ func want(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session) str
 			message += "\n\n"
 		}
 		message += "failed adding: " + strings.Join(failed, ", ")
+	}
+	if len(roleFailed) > 0 {
+		if len(message) > 0 {
+			message += "\n\n"
+		}
+		message += "failed adding roles: " + strings.Join(failed, ", ")
 	}
 	return message
 }
@@ -140,6 +149,8 @@ func listWants(pieces []string, m *discordgo.MessageCreate, s *discordgo.Session
 	for _, p := range pokemon {
 		names = append(names, p.ID)
 	}
+
+	syncRoles(m, names, s)
 
 	return "your wants: `" + strings.Join(names, "`, `") + "`"
 }
@@ -256,10 +267,10 @@ func searchForPokemon(pieces []string, m *discordgo.MessageCreate, s *discordgo.
 // add a role to a user. creates it if it doesn't exist. on error, log it and silently return.
 //
 // currently a bit of a mess.
-func addRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) {
+func addRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) error {
 	// don't bother if it's in a PM
 	if m.GuildID == "" {
-		return
+		return nil
 	}
 
 	var err error
@@ -271,24 +282,27 @@ func addRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) 
 			if !strings.HasPrefix(err.Error(), errorForbidden) {
 				log.Printf("error creating roleName in guild %s: %s\n", m.GuildID, err.Error())
 			}
-			return
+			return err
 		}
 		_, err = s.GuildRoleEdit(m.GuildID, role.ID, roleName, 0, false, 0, true)
 		if err != nil {
 			log.Printf("error updating roleName %s in guild %s: %s\n", roleName, m.GuildID, err.Error())
 
-			err = s.GuildRoleDelete(m.GuildID, role.ID)
-			if err != nil {
-				log.Printf("error deleting roleName %s om guild %s: %s\n", roleName, m.GuildID, err.Error())
+			deleteErr := s.GuildRoleDelete(m.GuildID, role.ID)
+			if deleteErr != nil {
+				log.Printf("error deleting roleName %s in guild %s: %s\n", roleName, m.GuildID, err.Error())
 			}
-			return
+			return err
 		}
 	}
 
 	err = s.GuildMemberRoleAdd(m.GuildID, m.Author.ID, role.ID)
 	if err != nil {
 		log.Printf("error adding roleName %s to user %s in guild %s: %s\n", roleName, m.Author.Username, m.GuildID, err.Error())
+		return err
 	}
+
+	return nil
 }
 
 func removeRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Session) {
@@ -308,6 +322,7 @@ func removeRole(roleName string, m *discordgo.MessageCreate, s *discordgo.Sessio
 		if !strings.HasPrefix(err.Error(), errorForbidden) {
 			log.Printf("error removing role %s from user %s in guild %s: %s\n", roleName, m.Author.Username, m.GuildID, err.Error())
 		}
+		return
 	}
 }
 
@@ -326,13 +341,60 @@ func getRole(roleName, guildID string, s *discordgo.Session) *discordgo.Role {
 	return nil
 }
 
+func syncRoles(m *discordgo.MessageCreate, wants []string, s *discordgo.Session) {
+	user, err := s.GuildMember(m.GuildID, m.Author.ID)
+	if err != nil {
+		log.Printf("error getting guild member: %s", err)
+		return
+	}
+	userRoles := make(map[string]bool)
+	for _, v := range user.Roles {
+		userRoles[v] = true
+	}
+
+	roleIDMap := make(map[string]*discordgo.Role)
+	roleNameMap := make(map[string]*discordgo.Role)
+	roles, err := s.GuildRoles(m.GuildID)
+	if err != nil {
+		log.Printf("error getting guild roles: %s", err)
+		return
+	}
+	for _, v := range roles {
+		roleIDMap[v.ID] = v
+		roleNameMap[v.Name] = v
+	}
+
+	// add any roles the user is missing
+	for _, want := range wants {
+		wantedRole, exists := roleNameMap[want]
+		if !exists {
+			// role doesn't exist on the server, so clearly they don't have it
+			if err := addRole(want, m, s); err != nil {
+				log.Printf("error adding role; skipping remaining syncs: %s", err)
+				return
+			}
+			continue
+		}
+		if _, wanted := userRoles[wantedRole.ID]; !wanted {
+			// the role exists but they don't have it
+			if err := addRole(want, m, s); err != nil {
+				log.Printf("error adding role; skipping remaining syncs: %s", err)
+				return
+			}
+			continue
+		}
+	}
+
+	// remove any roles the user should no longer have
+}
+
 func init() {
 	if wantURL == "" {
 		log.Println("no WANT_URL specified; cannot run want command")
 		return
 	}
-	registerCommand("want", want, "`want wobbuffet` to add to your wants")
+	registerCommand("want", want, "`want wobbuffet` to add to your wants. specify multiple separated by spaces (no commas).")
 	registerCommand("unwant", unwant, "`unwant wobbuffet` to remove from your wants")
-	registerCommand("wants", listWants, "list your wants")
+	registerCommand("wants", listWants, "list your wants. will also sync wants/roles between servers.")
 	registerCommand("search", searchForPokemon, "search for Pokemon by name")
 }
