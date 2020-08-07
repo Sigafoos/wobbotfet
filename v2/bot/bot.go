@@ -165,6 +165,11 @@ func (b *Bot) ActivePMs() []string {
 	return pms
 }
 
+// Roles returns the roles for a server.
+func (b *Bot) Roles(server string) ([]*discordgo.Role, error) {
+	return b.session.GuildRoles(server)
+}
+
 func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	defer func() {
 		if r := recover(); r != nil {

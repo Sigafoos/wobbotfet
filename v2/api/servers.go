@@ -11,7 +11,7 @@ import (
 // A Server represents a Discord guild/server.
 type Server struct {
 	*discordgo.UserGuild
-	ParsedPermissions []string
+	ParsedPermissions []string `json:"parsed_permissions"`
 }
 
 // GetServers returns a list of servers the bot is connected to.

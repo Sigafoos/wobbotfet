@@ -43,6 +43,7 @@ func main() {
 		a := api.New(wob)
 		r.HandleFunc("/servers", a.GetServers).Methods(http.MethodGet)
 		r.HandleFunc("/pms", a.GetActivePMs).Methods(http.MethodGet)
+		r.HandleFunc("/servers/{server}/roles", a.GetRoles).Methods(http.MethodGet)
 
 		s.ListenAndServe()
 	}
