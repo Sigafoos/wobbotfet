@@ -158,7 +158,7 @@ func (b *Bot) Servers() ([]*discordgo.UserGuild, error) {
 func (b *Bot) ActivePMs() []string {
 	pms := make([]string, len(activePMs))
 	i := 0
-	for k, _ := range activePMs {
+	for k := range activePMs {
 		pms[i] = k
 		i++
 	}
@@ -218,8 +218,56 @@ func (b *Bot) readMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		response = f(pieces[1:], m, s)
 	}
 
-	if m.GuildID != "" {
-		response = m.Author.Mention() + ": " + response
+	messages := b.splitResponse(response)
+
+	for _, message := range messages {
+		if m.GuildID != "" {
+			message = m.Author.Mention() + ": " + message
+		}
+		if _, err := s.ChannelMessageSend(m.ChannelID, message); err != nil {
+			log.Printf("error sending message: %s", err)
+			s.ChannelMessageSend(m.ChannelID, "sorry, something's gone wrong")
+			return
+		}
 	}
-	s.ChannelMessageSend(m.ChannelID, response)
+
+}
+
+// discord has a 2000 character limit. if it's longer than that, find a good way to split it into multiple messages.
+func (b *Bot) splitResponse(response string) []string {
+	if len(response) <= 2000 {
+		return []string{response}
+	}
+
+	var messages []string
+	splitResponse := strings.Split(response, "\n")
+
+	// ain't gonna lie, haven't tested this bit
+	if len(splitResponse) == 1 {
+		log.Printf("%v character message has no line breaks", len(response))
+		for i := 0; i <= len(response)/2000; i++ {
+			start := 2000 * i
+			end := 2000 * (i + 1)
+			if end > len(response) {
+				end = len(response)
+				messages = append(messages, response[start:end])
+			}
+		}
+		return messages
+	}
+
+	// send the fewest possible messages, split by line breaks
+	var current string
+	for i, line := range splitResponse {
+		if len(current)+len(line) > 2000 {
+			messages = append(messages, current)
+			current = ""
+		}
+		current += line + "\n"
+
+		if i == len(splitResponse)-1 {
+			messages = append(messages, current)
+		}
+	}
+	return messages
 }
