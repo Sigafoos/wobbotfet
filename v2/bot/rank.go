@@ -141,6 +141,12 @@ func getRank(pieces []string, m *discordgo.MessageCreate, verbose bool, betterth
 }
 
 func parseQuery(p []string) (Query, error) {
+	// turn "rank azumarill 4/1/3" into "rank azumarill 4 1 3"
+	if strings.Count(p[len(p)-1], "/") == 2 {
+		proper := strings.Split(p[len(p)-1], "/")
+		p[len(p)-1] = proper[0]
+		p = append(p, proper[1], proper[2])
+	}
 	floor, ok := FloorMap[p[len(p)-1]]
 	if ok {
 		p = p[:len(p)-1]
